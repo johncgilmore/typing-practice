@@ -160,7 +160,7 @@ class TypingGame {
         this.isPlaying = true;
         this.score = 0;
         this.level = 1;
-        this.timeLeft = 60;
+        this.timeLeft = this.mode === 'advanced' ? 10 : 60;
         this.correctCount = 0;
         this.totalCount = 0;
         this.wordsCompleted = 0;
@@ -282,6 +282,7 @@ class TypingGame {
                     if (this.normalizeWord(this.typedWordBuffer) === this.normalizeWord(this.currentTarget)) {
                         this.wordsCompleted++;
                         this.score += this.level * (5 + this.currentTarget.length);
+                        if (this.mode === 'advanced') this.addAdvancedWordTime();
                         this.showFeedback('✅ Word!', 'correct');
                         this.playSound('word');
                         this.currentWordIndex++;
@@ -314,6 +315,7 @@ class TypingGame {
                 if (this.typedWordBuffer.length > 0 && this.normalizeWord(this.typedWordBuffer) === this.normalizeWord(this.currentTarget)) {
                     this.wordsCompleted++;
                     this.score += this.level * (5 + this.currentTarget.length);
+                    if (this.mode === 'advanced') this.addAdvancedWordTime();
                     this.showFeedback('✅ Word!', 'correct');
                     this.playSound('word');
                     this.currentWordIndex++;
@@ -343,6 +345,7 @@ class TypingGame {
                     if (isLastWord) {
                         this.wordsCompleted++;
                         this.score += this.level * (5 + this.currentTarget.length);
+                        if (this.mode === 'advanced') this.addAdvancedWordTime();
                         this.showFeedback('✅ Word!', 'correct');
                         this.playSound('word');
                         this.currentWordIndex++;
@@ -450,18 +453,20 @@ class TypingGame {
     }
     
     startTimers() {
-        // Game timer (countdown)
+        // Game timer (countdown) — finer ticks for advanced
+        const tickMs = this.mode === 'advanced' ? 100 : 1000;
+        const decrement = tickMs / 1000;
+        if (this.gameTimer) clearInterval(this.gameTimer);
         this.gameTimer = setInterval(() => {
-            this.timeLeft--;
-            this.elements.timer.textContent = this.timeLeft;
+            this.timeLeft = Math.max(0, this.timeLeft - decrement);
+            this.elements.timer.textContent = Math.max(0, Math.ceil(this.timeLeft));
             if (this.mode === 'advanced') {
                 this.updateWpm();
             }
-            
             if (this.timeLeft <= 0) {
                 this.endGame();
             }
-        }, 1000);
+        }, tickMs);
     }
     
     endGame() {
@@ -480,7 +485,7 @@ class TypingGame {
     updateUI() {
         this.elements.score.textContent = this.score;
         this.elements.level.textContent = this.level;
-        this.elements.timer.textContent = this.timeLeft;
+        this.elements.timer.textContent = Math.max(0, Math.ceil(this.timeLeft));
         this.elements.progressFill.style.width = '0%';
         if (this.mode === 'advanced') this.updateWpm();
     }
@@ -634,6 +639,12 @@ class TypingGame {
         const minutes = Math.max(1/60, (Date.now() - this.gameStartTime) / 60000);
         const wpm = Math.round(this.wordsCompleted / minutes);
         if (this.elements.wpm) this.elements.wpm.textContent = wpm;
+    }
+
+    addAdvancedWordTime() {
+        // Level 1: +1.00s per word; Level L: +1.00 * 0.98^(L-1)
+        const bonus = Math.pow(0.98, Math.max(0, this.level - 1));
+        this.timeLeft += bonus;
     }
 
     // ===== Leaderboard & Name Handling =====
