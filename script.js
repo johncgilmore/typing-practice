@@ -164,6 +164,7 @@ class TypingGame {
         this.correctCount = 0;
         this.totalCount = 0;
         this.wordsCompleted = 0;
+        this.sentencesCompleted = 0;
         this.typedWordBuffer = '';
         this.gameStartTime = Date.now();
         this.sentenceText = '';
@@ -289,12 +290,13 @@ class TypingGame {
                             // Sentence complete
                             this.score += 10 * this.level;
                             this.showFeedback('🎉 Sentence complete!', 'correct');
+                            this.sentencesCompleted++;
+                            this.checkAdvancedLevelUp();
                             this.startAdvancedSentence(this.level);
                         } else {
                             this.currentTarget = this.sentenceWords[this.currentWordIndex];
                             this.updateAdvancedTargetDisplay();
                         }
-                        this.checkAdvancedLevelUp();
                         this.updateUI();
                     } else {
                         this.showFeedback('❌ Wrong word', 'incorrect');
@@ -319,12 +321,13 @@ class TypingGame {
                     if (this.currentWordIndex >= this.sentenceWords.length) {
                         this.score += 10 * this.level;
                         this.showFeedback('🎉 Sentence complete!', 'correct');
+                        this.sentencesCompleted++;
+                        this.checkAdvancedLevelUp();
                         this.startAdvancedSentence(this.level);
                     } else {
                         this.currentTarget = this.sentenceWords[this.currentWordIndex];
                         this.updateAdvancedTargetDisplay();
                     }
-                    this.checkAdvancedLevelUp();
                     this.updateUI();
                 }
                 return;
@@ -347,6 +350,7 @@ class TypingGame {
                         // Sentence complete
                         this.score += 10 * this.level;
                         this.showFeedback('🎉 Sentence complete!', 'correct');
+                        this.sentencesCompleted++;
                         this.checkAdvancedLevelUp();
                         this.startAdvancedSentence(this.level);
                         this.updateUI();
@@ -428,7 +432,8 @@ class TypingGame {
     }
 
     checkAdvancedLevelUp() {
-        const newLevel = Math.floor(this.wordsCompleted / 5) + 1;
+        // Level is based on sentences completed in advanced mode
+        const newLevel = this.sentencesCompleted + 1; // start at 1, +1 per sentence
         if (newLevel > this.level) {
             this.level = newLevel;
             this.showFeedback(`🚀 Level ${this.level}!`, 'correct');
