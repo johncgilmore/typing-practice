@@ -81,6 +81,7 @@ class TypingGame {
             finalWpm: document.getElementById('finalWpm'),
             finalWpmStat: document.getElementById('finalWpmStat'),
             modeBeginner: document.getElementById('modeBeginner'),
+            modeMedium: document.getElementById('modeMedium'),
             modeAdvanced: document.getElementById('modeAdvanced'),
             // Modals
             nameModal: document.getElementById('nameModal'),
@@ -115,6 +116,7 @@ class TypingGame {
         
         if (this.elements.modeBeginner && this.elements.modeAdvanced) {
             this.elements.modeBeginner.addEventListener('change', () => this.setMode('beginner'));
+            if (this.elements.modeMedium) this.elements.modeMedium.addEventListener('change', () => this.setMode('medium'));
             this.elements.modeAdvanced.addEventListener('change', () => this.setMode('advanced'));
         }
         
@@ -139,12 +141,12 @@ class TypingGame {
 
     setMode(mode) {
         this.mode = mode;
-        // Toggle WPM visibility
+        // Toggle WPM visibility (Medium and Advanced show WPM)
         if (this.elements.wpmStat) {
-            this.elements.wpmStat.style.display = this.mode === 'advanced' ? 'flex' : 'none';
+            this.elements.wpmStat.style.display = (this.mode === 'advanced' || this.mode === 'medium') ? 'flex' : 'none';
         }
         // Reset target display style
-        if (this.mode === 'advanced') {
+        if (this.mode === 'advanced' || this.mode === 'medium') {
             this.elements.targetLetter.classList.remove('target-letter');
             this.elements.targetLetter.classList.add('target-word');
         } else {
@@ -160,7 +162,7 @@ class TypingGame {
         this.isPlaying = true;
         this.score = 0;
         this.level = 1;
-        this.timeLeft = this.mode === 'advanced' ? 10 : 60;
+        this.timeLeft = (this.mode === 'advanced') ? 10 : (this.mode === 'medium' ? 20 : 60);
         this.correctCount = 0;
         this.totalCount = 0;
         this.wordsCompleted = 0;
@@ -245,7 +247,7 @@ class TypingGame {
             }, 10);
             console.log(`🎯 New target: ${displayText}`);
         } else {
-            // Advanced mode: ensure sentence exists and set current word
+            // Advanced/Medium mode: ensure sentence exists and set current word
             if (!this.sentenceWords || this.currentWordIndex >= this.sentenceWords.length) {
                 this.startAdvancedSentence(this.level);
             } else {
@@ -268,7 +270,7 @@ class TypingGame {
             }
             this.updateKeyboardVisual(pressedKey, pressedKey === this.currentTarget);
         } else {
-            // Advanced mode: word typing
+            // Advanced/Medium mode: word typing
             // Prevent default space scroll behavior
             if (pressedKey === ' ') event.preventDefault();
 
@@ -284,7 +286,8 @@ class TypingGame {
                 if (this.typedWordBuffer.length > 0) {
                     if (this.normalizeWord(this.typedWordBuffer) === this.normalizeWord(this.currentTarget)) {
                         this.wordsCompleted++;
-                        this.score += this.level * (5 + this.currentTarget.length);
+                        const wordPoints = (this.mode === 'medium') ? 2 : 1;
+                        this.score += wordPoints * this.level * (5 + this.currentTarget.length);
                         if (this.mode === 'advanced') this.accrueAdvancedWordTime();
                         this.showFeedback('✅ Word!', 'correct');
                         this.playSound('word');
@@ -317,7 +320,8 @@ class TypingGame {
             if (pressedKey === ',') {
                 if (this.typedWordBuffer.length > 0 && this.normalizeWord(this.typedWordBuffer) === this.normalizeWord(this.currentTarget)) {
                     this.wordsCompleted++;
-                    this.score += this.level * (5 + this.currentTarget.length);
+                    const wordPoints2 = (this.mode === 'medium') ? 2 : 1;
+                    this.score += wordPoints2 * this.level * (5 + this.currentTarget.length);
                     if (this.mode === 'advanced') this.accrueAdvancedWordTime();
                     this.showFeedback('✅ Word!', 'correct');
                     this.playSound('word');
@@ -347,7 +351,8 @@ class TypingGame {
                     const isLastWord = (this.currentWordIndex === this.sentenceWords.length - 1);
                     if (isLastWord) {
                         this.wordsCompleted++;
-                        this.score += this.level * (5 + this.currentTarget.length);
+                        const wordPoints3 = (this.mode === 'medium') ? 2 : 1;
+                        this.score += wordPoints3 * this.level * (5 + this.currentTarget.length);
                         if (this.mode === 'advanced') this.accrueAdvancedWordTime();
                         this.showFeedback('✅ Word!', 'correct');
                         this.playSound('word');
@@ -468,7 +473,7 @@ class TypingGame {
         this.gameTimer = setInterval(() => {
             this.timeLeft = Math.max(0, this.timeLeft - decrement);
             this.elements.timer.textContent = Math.max(0, Math.ceil(this.timeLeft));
-            if (this.mode === 'advanced') {
+            if (this.mode === 'advanced' || this.mode === 'medium') {
                 this.updateWpm();
             }
             if (this.timeLeft <= 0) {
@@ -497,7 +502,7 @@ class TypingGame {
         this.elements.level.textContent = this.level;
         this.elements.timer.textContent = Math.max(0, Math.ceil(this.timeLeft));
         this.elements.progressFill.style.width = '0%';
-        if (this.mode === 'advanced') this.updateWpm();
+        if (this.mode === 'advanced' || this.mode === 'medium') this.updateWpm();
     }
     
     initKeyboardVisual() {
@@ -567,8 +572,8 @@ class TypingGame {
         this.typedWordBuffer = '';
         this.updateAdvancedTargetDisplay();
         console.log(`📝 New sentence (L${level}): ${this.sentenceText}`);
-        // spawn fun memes on sentence advance
-        this.spawnMemeGifs();
+        // spawn fun memes on sentence advance (not in Medium mode)
+        if (this.mode !== 'medium') this.spawnMemeGifs();
     }
 
     pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -843,8 +848,8 @@ class TypingGame {
         };
         makeConfetti(0);
         makeConfetti(window.innerHeight - 10);
-        // also launch side memes on level up
-        this.spawnMemeGifs();
+        // also launch side memes on level up (not in Medium mode)
+        if (this.mode !== 'medium') this.spawnMemeGifs();
     }
 
     spawnMemeGifs() {
