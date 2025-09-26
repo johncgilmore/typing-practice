@@ -92,8 +92,10 @@ class TypingGame {
             dashboardModal: document.getElementById('dashboardModal'),
             closeDashboard: document.getElementById('closeDashboard'),
             tabBeginner: document.getElementById('tabBeginner'),
+            tabMedium: document.getElementById('tabMedium'),
             tabAdvanced: document.getElementById('tabAdvanced'),
             beginnerBoardBody: document.getElementById('beginnerBoardBody'),
+            mediumBoardBody: document.getElementById('mediumBoardBody'),
             advancedBoardBody: document.getElementById('advancedBoardBody'),
             changeNameBtn: document.getElementById('changeNameBtn'),
             // Confirm name modal
@@ -215,7 +217,7 @@ class TypingGame {
         this.elements.finalScore.textContent = this.score;
         this.elements.finalLevel.textContent = this.level;
         this.elements.accuracy.textContent = accuracy + '%';
-        if (this.mode === 'advanced') {
+        if (this.mode === 'advanced' || this.mode === 'medium') {
             const minutes = Math.max(1/60, (Date.now() - this.gameStartTime) / 60000);
             const wpm = Math.round(this.wordsCompleted / minutes);
             if (this.elements.finalWpm && this.elements.finalWpmStat) {
@@ -744,6 +746,7 @@ class TypingGame {
         if (this.elements.changeNameBtn) this.elements.changeNameBtn.onclick = () => this.openNameModal();
         if (this.elements.tabBeginner && this.elements.tabAdvanced) {
             this.elements.tabBeginner.onclick = () => this.switchBoard('beginner');
+            if (this.elements.tabMedium) this.elements.tabMedium.onclick = () => this.switchBoard('medium');
             this.elements.tabAdvanced.onclick = () => this.switchBoard('advanced');
         }
         this.renderBoards();
@@ -751,24 +754,23 @@ class TypingGame {
 
     switchBoard(which) {
         const tabB = this.elements.tabBeginner, tabA = this.elements.tabAdvanced;
+        const tabM = this.elements.tabMedium;
         const boardB = document.getElementById('beginnerBoard');
+        const boardM = document.getElementById('mediumBoard');
         const boardA = document.getElementById('advancedBoard');
         if (!tabB || !tabA || !boardB || !boardA) return;
-        if (which === 'advanced') {
-            tabA.classList.add('active');
-            tabB.classList.remove('active');
-            boardA.classList.add('active');
-            boardB.classList.remove('active');
-        } else {
-            tabB.classList.add('active');
-            tabA.classList.remove('active');
-            boardB.classList.add('active');
-            boardA.classList.remove('active');
-        }
+        const setActive = (el, on) => { if (!el) return; el.classList.toggle('active', !!on); };
+        const setBoard = (el, on) => { if (!el) return; el.classList.toggle('active', !!on); };
+        setActive(tabB, which === 'beginner');
+        setActive(tabM, which === 'medium');
+        setActive(tabA, which === 'advanced');
+        setBoard(boardB, which === 'beginner');
+        setBoard(boardM, which === 'medium');
+        setBoard(boardA, which === 'advanced');
     }
 
-    getBoardKey() { return this.mode === 'advanced' ? 'hrtm_board_advanced' : 'hrtm_board_beginner'; }
-    getBoardKeyByMode(mode) { return mode === 'advanced' ? 'hrtm_board_advanced' : 'hrtm_board_beginner'; }
+    getBoardKey() { return this.mode === 'advanced' ? 'hrtm_board_advanced' : (this.mode === 'medium' ? 'hrtm_board_medium' : 'hrtm_board_beginner'); }
+    getBoardKeyByMode(mode) { return mode === 'advanced' ? 'hrtm_board_advanced' : (mode === 'medium' ? 'hrtm_board_medium' : 'hrtm_board_beginner'); }
 
     saveScore() {
         const name = localStorage.getItem('hrtm_player_name') || 'Player';
@@ -785,10 +787,10 @@ class TypingGame {
         const key = this.getBoardKey();
         const arr = JSON.parse(localStorage.getItem(key) || '[]');
         arr.push(entry);
-        // sort desc by score primarily; for advanced, tie-break by wpm
+        // sort desc by score primarily; for advanced/medium, tie-break by wpm
         arr.sort((a,b) => {
             if (b.score !== a.score) return b.score - a.score;
-            if (this.mode === 'advanced') return (b.wpm||0) - (a.wpm||0);
+            if (this.mode === 'advanced' || this.mode === 'medium') return (b.wpm||0) - (a.wpm||0);
             return b.level - a.level;
         });
         // keep top 20
@@ -798,10 +800,13 @@ class TypingGame {
 
     renderBoards() {
         const bKey = this.getBoardKeyByMode('beginner');
+        const mKey = this.getBoardKeyByMode('medium');
         const aKey = this.getBoardKeyByMode('advanced');
         const bArr = JSON.parse(localStorage.getItem(bKey) || '[]');
+        const mArr = JSON.parse(localStorage.getItem(mKey) || '[]');
         const aArr = JSON.parse(localStorage.getItem(aKey) || '[]');
         if (this.elements.beginnerBoardBody) this.elements.beginnerBoardBody.innerHTML = this.renderBoardRows(bArr, 'beginner');
+        if (this.elements.mediumBoardBody) this.elements.mediumBoardBody.innerHTML = this.renderBoardRows(mArr, 'medium');
         if (this.elements.advancedBoardBody) this.elements.advancedBoardBody.innerHTML = this.renderBoardRows(aArr, 'advanced');
     }
 
@@ -812,7 +817,7 @@ class TypingGame {
                 `<td>${this.escapeHtml(e.name)}</td>`,
                 `<td>${e.score}</td>`,
                 `<td>${e.level}</td>`,
-                mode === 'advanced' ? `<td>${e.wpm||0}</td>` : '',
+                (mode === 'advanced' || mode === 'medium') ? `<td>${e.wpm||0}</td>` : '',
                 `<td>${e.accuracy}%</td>`,
                 `<td>${this.escapeHtml(e.date)}</td>`
             ].filter(Boolean).join('');
