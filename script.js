@@ -21,6 +21,13 @@ class TypingGame {
         this.sentenceWords = [];
         this.currentWordIndex = 0;
         this.beginnerPitchStep = 0;
+        this.memeGifUrls = [
+            'https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif',
+            'https://media.giphy.com/media/3orieYJw7v8K2S1O76/giphy.gif',
+            'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif',
+            'https://media.giphy.com/media/26n6WywJyh39n1pBu/giphy.gif',
+            'https://media.giphy.com/media/3o7aCPg2n4k5p0Z2Fq/giphy.gif'
+        ];
         
         // Home row keys (the keys we want players to practice)
         this.homeRowKeys = ['a', 's', 'd', 'f', ' ', 'j', 'k', 'l', ';'];
@@ -157,6 +164,7 @@ class TypingGame {
         this.correctCount = 0;
         this.totalCount = 0;
         this.wordsCompleted = 0;
+        this.sentencesCompleted = 0;
         this.typedWordBuffer = '';
         this.gameStartTime = Date.now();
         this.sentenceText = '';
@@ -282,12 +290,13 @@ class TypingGame {
                             // Sentence complete
                             this.score += 10 * this.level;
                             this.showFeedback('🎉 Sentence complete!', 'correct');
+                            this.sentencesCompleted++;
+                            this.checkAdvancedLevelUp();
                             this.startAdvancedSentence(this.level);
                         } else {
                             this.currentTarget = this.sentenceWords[this.currentWordIndex];
                             this.updateAdvancedTargetDisplay();
                         }
-                        this.checkAdvancedLevelUp();
                         this.updateUI();
                     } else {
                         this.showFeedback('❌ Wrong word', 'incorrect');
@@ -296,6 +305,30 @@ class TypingGame {
                         this.typedWordBuffer = '';
                         this.updateAdvancedTargetDisplay();
                     }
+                }
+                return;
+            }
+
+            // Word submission on comma (helps when sentence includes commas)
+            if (pressedKey === ',') {
+                if (this.typedWordBuffer.length > 0 && this.normalizeWord(this.typedWordBuffer) === this.normalizeWord(this.currentTarget)) {
+                    this.wordsCompleted++;
+                    this.score += this.level * (5 + this.currentTarget.length);
+                    this.showFeedback('✅ Word!', 'correct');
+                    this.playSound('word');
+                    this.currentWordIndex++;
+                    this.typedWordBuffer = '';
+                    if (this.currentWordIndex >= this.sentenceWords.length) {
+                        this.score += 10 * this.level;
+                        this.showFeedback('🎉 Sentence complete!', 'correct');
+                        this.sentencesCompleted++;
+                        this.checkAdvancedLevelUp();
+                        this.startAdvancedSentence(this.level);
+                    } else {
+                        this.currentTarget = this.sentenceWords[this.currentWordIndex];
+                        this.updateAdvancedTargetDisplay();
+                    }
+                    this.updateUI();
                 }
                 return;
             }
@@ -317,6 +350,7 @@ class TypingGame {
                         // Sentence complete
                         this.score += 10 * this.level;
                         this.showFeedback('🎉 Sentence complete!', 'correct');
+                        this.sentencesCompleted++;
                         this.checkAdvancedLevelUp();
                         this.startAdvancedSentence(this.level);
                         this.updateUI();
@@ -393,15 +427,18 @@ class TypingGame {
             if (this.mode === 'beginner') {
                 this.beginnerPitchStep = 0;
             }
+            this.triggerLevelUpVfx();
         }
     }
 
     checkAdvancedLevelUp() {
-        const newLevel = Math.floor(this.wordsCompleted / 5) + 1;
+        // Level is based on sentences completed in advanced mode
+        const newLevel = this.sentencesCompleted + 1; // start at 1, +1 per sentence
         if (newLevel > this.level) {
             this.level = newLevel;
             this.showFeedback(`🚀 Level ${this.level}!`, 'correct');
             this.playSound('levelUp');
+            this.triggerLevelUpVfx();
             return true;
         }
         return false;
@@ -515,6 +552,8 @@ class TypingGame {
         this.typedWordBuffer = '';
         this.updateAdvancedTargetDisplay();
         console.log(`📝 New sentence (L${level}): ${this.sentenceText}`);
+        // spawn fun memes on sentence advance
+        this.spawnMemeGifs();
     }
 
     pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -716,6 +755,51 @@ class TypingGame {
     }
 
     escapeHtml(s) { return (s||'').replace(/[&<>"]+/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    
+    // ===== Level-up VFX (non-blocking) =====
+    triggerLevelUpVfx() {
+        const overlay = document.getElementById('vfxOverlay');
+        if (!overlay) return;
+        // Sweep bar from left to right
+        const sweep = document.createElement('div');
+        sweep.className = 'vfx-sweep';
+        overlay.appendChild(sweep);
+        setTimeout(() => { sweep.remove(); }, 1000);
+
+        // Edge confetti bursts (top and bottom edges)
+        const colors = ['#ffd700', '#ff6b6b', '#4fd1c5', '#667eea', '#38a169'];
+        const makeConfetti = (y) => {
+            for (let i = 0; i < 30; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'vfx-confetti';
+                piece.style.left = Math.random() * 100 + 'vw';
+                piece.style.top = y + 'px';
+                piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.transform = `rotate(${Math.random()*360}deg)`;
+                overlay.appendChild(piece);
+                setTimeout(() => piece.remove(), 1300);
+            }
+        };
+        makeConfetti(0);
+        makeConfetti(window.innerHeight - 10);
+        // also launch side memes on level up
+        this.spawnMemeGifs();
+    }
+
+    spawnMemeGifs() {
+        const overlay = document.getElementById('vfxOverlay');
+        if (!overlay || !this.memeGifUrls || this.memeGifUrls.length === 0) return;
+        const count = 2; // one on each side
+        for (let i = 0; i < count; i++) {
+            const img = document.createElement('img');
+            img.className = 'meme-float ' + (i % 2 === 0 ? 'left' : 'right');
+            img.src = this.memeGifUrls[Math.floor(Math.random() * this.memeGifUrls.length)];
+            img.alt = 'meme';
+            img.style.top = (60 + Math.random() * 20) + 'vh';
+            overlay.appendChild(img);
+            setTimeout(() => img.remove(), 6500);
+        }
+    }
     
     createParticleEffect() {
         // Create floating particles for visual feedback
