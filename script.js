@@ -160,7 +160,7 @@ class TypingGame {
         this.isPlaying = true;
         this.score = 0;
         this.level = 1;
-        this.timeLeft = 60;
+        this.timeLeft = this.mode === 'advanced' ? 10 : 60;
         this.correctCount = 0;
         this.totalCount = 0;
         this.wordsCompleted = 0;
@@ -171,6 +171,9 @@ class TypingGame {
         this.sentenceWords = [];
         this.currentWordIndex = 0;
         this.beginnerPitchStep = 0;
+        // Ensure any prior low-time classes are cleared
+        document.body.classList.remove('time-warning', 'time-danger', 'time-flash');
+        this.pendingTimeBonus = 0; // advanced: accumulate per word, grant on level-up
         
         // Update UI
         this.updateUI();
@@ -282,6 +285,7 @@ class TypingGame {
                     if (this.normalizeWord(this.typedWordBuffer) === this.normalizeWord(this.currentTarget)) {
                         this.wordsCompleted++;
                         this.score += this.level * (5 + this.currentTarget.length);
+                        if (this.mode === 'advanced') this.accrueAdvancedWordTime();
                         this.showFeedback('✅ Word!', 'correct');
                         this.playSound('word');
                         this.currentWordIndex++;
@@ -314,6 +318,7 @@ class TypingGame {
                 if (this.typedWordBuffer.length > 0 && this.normalizeWord(this.typedWordBuffer) === this.normalizeWord(this.currentTarget)) {
                     this.wordsCompleted++;
                     this.score += this.level * (5 + this.currentTarget.length);
+                    if (this.mode === 'advanced') this.accrueAdvancedWordTime();
                     this.showFeedback('✅ Word!', 'correct');
                     this.playSound('word');
                     this.currentWordIndex++;
@@ -343,6 +348,7 @@ class TypingGame {
                     if (isLastWord) {
                         this.wordsCompleted++;
                         this.score += this.level * (5 + this.currentTarget.length);
+                        if (this.mode === 'advanced') this.accrueAdvancedWordTime();
                         this.showFeedback('✅ Word!', 'correct');
                         this.playSound('word');
                         this.currentWordIndex++;
@@ -439,6 +445,11 @@ class TypingGame {
             this.showFeedback(`🚀 Level ${this.level}!`, 'correct');
             this.playSound('levelUp');
             this.triggerLevelUpVfx();
+            // Award pending time bonus with animation in advanced mode
+            if (this.mode === 'advanced' && this.pendingTimeBonus && this.pendingTimeBonus > 0) {
+                this.animateAndGrantTimeBonus(this.pendingTimeBonus);
+                this.pendingTimeBonus = 0;
+            }
             return true;
         }
         return false;
@@ -450,18 +461,20 @@ class TypingGame {
     }
     
     startTimers() {
-        // Game timer (countdown)
+        // Game timer (countdown) — finer ticks for advanced
+        const tickMs = this.mode === 'advanced' ? 100 : 1000;
+        const decrement = tickMs / 1000;
+        if (this.gameTimer) clearInterval(this.gameTimer);
         this.gameTimer = setInterval(() => {
-            this.timeLeft--;
-            this.elements.timer.textContent = this.timeLeft;
+            this.timeLeft = Math.max(0, this.timeLeft - decrement);
+            this.elements.timer.textContent = Math.max(0, Math.ceil(this.timeLeft));
             if (this.mode === 'advanced') {
                 this.updateWpm();
             }
-            
             if (this.timeLeft <= 0) {
                 this.endGame();
             }
-        }, 1000);
+        }, tickMs);
     }
     
     endGame() {
@@ -474,13 +487,15 @@ class TypingGame {
         // Show game over screen
         setTimeout(() => {
             this.showGameOver();
+            // Auto-open leaderboard after round
+            this.openDashboard();
         }, 500);
     }
     
     updateUI() {
         this.elements.score.textContent = this.score;
         this.elements.level.textContent = this.level;
-        this.elements.timer.textContent = this.timeLeft;
+        this.elements.timer.textContent = Math.max(0, Math.ceil(this.timeLeft));
         this.elements.progressFill.style.width = '0%';
         if (this.mode === 'advanced') this.updateWpm();
     }
@@ -634,6 +649,52 @@ class TypingGame {
         const minutes = Math.max(1/60, (Date.now() - this.gameStartTime) / 60000);
         const wpm = Math.round(this.wordsCompleted / minutes);
         if (this.elements.wpm) this.elements.wpm.textContent = wpm;
+    }
+
+    accrueAdvancedWordTime() {
+        // Level 1: +1.00s per word; Level L: +1.00 * 0.98^(L-1)
+        const bonus = Math.pow(0.98, Math.max(0, this.level - 1));
+        this.pendingTimeBonus = (this.pendingTimeBonus || 0) + bonus;
+        this.updatePendingBonusHint();
+    }
+
+    updatePendingBonusHint() {
+        // Optional: could display a small accumulating hint near timer
+        // Kept minimal to avoid clutter; available for future use
+    }
+
+    animateAndGrantTimeBonus(amount) {
+        // Create a floating token near keyboard area and animate to the timer
+        const overlay = document.getElementById('vfxOverlay');
+        if (!overlay) { this.timeLeft += amount; return; }
+        const token = document.createElement('div');
+        token.className = 'time-bonus';
+        token.textContent = `+${amount.toFixed(2)}s`;
+        overlay.appendChild(token);
+
+        // Start position: center-bottom (approx keyboard area)
+        const startX = window.innerWidth / 2;
+        const startY = window.innerHeight * 0.78;
+        token.style.transform = `translate(${startX}px, ${startY}px)`;
+
+        // End position: timer element location
+        const timerEl = this.elements.timer;
+        const rect = timerEl ? timerEl.getBoundingClientRect() : { left: window.innerWidth - 60, top: 40 };
+        const endX = rect.left + rect.width / 2;
+        const endY = rect.top;
+
+        // Animate via JS
+        setTimeout(() => {
+            token.style.transition = 'transform 800ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 800ms ease';
+            token.style.transform = `translate(${endX}px, ${endY}px)`;
+            token.style.opacity = '0.2';
+        }, 20);
+
+        setTimeout(() => {
+            token.remove();
+            this.timeLeft += amount;
+            this.elements.timer.textContent = Math.max(0, Math.ceil(this.timeLeft));
+        }, 850);
     }
 
     // ===== Leaderboard & Name Handling =====
