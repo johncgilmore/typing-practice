@@ -288,7 +288,7 @@ class TypingGame {
                         this.wordsCompleted++;
                         const wordPoints = (this.mode === 'medium') ? 2 : 1;
                         this.score += wordPoints * this.level * (5 + this.currentTarget.length);
-                        if (this.mode === 'advanced') this.accrueAdvancedWordTime();
+                        if (this.mode === 'advanced' || this.mode === 'medium') this.accrueAdvancedWordTime();
                         this.showFeedback('✅ Word!', 'correct');
                         this.playSound('word');
                         this.currentWordIndex++;
@@ -322,7 +322,7 @@ class TypingGame {
                     this.wordsCompleted++;
                     const wordPoints2 = (this.mode === 'medium') ? 2 : 1;
                     this.score += wordPoints2 * this.level * (5 + this.currentTarget.length);
-                    if (this.mode === 'advanced') this.accrueAdvancedWordTime();
+                    if (this.mode === 'advanced' || this.mode === 'medium') this.accrueAdvancedWordTime();
                     this.showFeedback('✅ Word!', 'correct');
                     this.playSound('word');
                     this.currentWordIndex++;
@@ -353,7 +353,7 @@ class TypingGame {
                         this.wordsCompleted++;
                         const wordPoints3 = (this.mode === 'medium') ? 2 : 1;
                         this.score += wordPoints3 * this.level * (5 + this.currentTarget.length);
-                        if (this.mode === 'advanced') this.accrueAdvancedWordTime();
+                        if (this.mode === 'advanced' || this.mode === 'medium') this.accrueAdvancedWordTime();
                         this.showFeedback('✅ Word!', 'correct');
                         this.playSound('word');
                         this.currentWordIndex++;
@@ -450,8 +450,8 @@ class TypingGame {
             this.showFeedback(`🚀 Level ${this.level}!`, 'correct');
             this.playSound('levelUp');
             this.triggerLevelUpVfx();
-            // Award pending time bonus with animation in advanced mode
-            if (this.mode === 'advanced' && this.pendingTimeBonus && this.pendingTimeBonus > 0) {
+            // Award pending time bonus with animation in advanced/medium mode
+            if ((this.mode === 'advanced' || this.mode === 'medium') && this.pendingTimeBonus && this.pendingTimeBonus > 0) {
                 this.animateAndGrantTimeBonus(this.pendingTimeBonus);
                 this.pendingTimeBonus = 0;
             }
@@ -467,7 +467,7 @@ class TypingGame {
     
     startTimers() {
         // Game timer (countdown) — finer ticks for advanced
-        const tickMs = this.mode === 'advanced' ? 100 : 1000;
+        const tickMs = (this.mode === 'advanced' || this.mode === 'medium') ? 100 : 1000;
         const decrement = tickMs / 1000;
         if (this.gameTimer) clearInterval(this.gameTimer);
         this.gameTimer = setInterval(() => {
