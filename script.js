@@ -171,6 +171,8 @@ class TypingGame {
         this.sentenceWords = [];
         this.currentWordIndex = 0;
         this.beginnerPitchStep = 0;
+        // Ensure any prior low-time classes are cleared
+        document.body.classList.remove('time-warning', 'time-danger', 'time-flash');
         this.pendingTimeBonus = 0; // advanced: accumulate per word, grant on level-up
         
         // Update UI
@@ -468,18 +470,6 @@ class TypingGame {
             this.elements.timer.textContent = Math.max(0, Math.ceil(this.timeLeft));
             if (this.mode === 'advanced') {
                 this.updateWpm();
-            }
-            // Low-time background effects
-            const body = document.body;
-            body.classList.remove('time-warning', 'time-danger', 'time-flash');
-            if (this.mode === 'advanced') {
-                if (this.timeLeft <= 1.2 && this.timeLeft > 0) {
-                    body.classList.add('time-flash');
-                } else if (this.timeLeft <= 5) {
-                    body.classList.add('time-danger');
-                } else if (this.timeLeft <= 10) {
-                    body.classList.add('time-warning');
-                }
             }
             if (this.timeLeft <= 0) {
                 this.endGame();
