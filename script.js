@@ -393,6 +393,7 @@ class TypingGame {
             if (this.mode === 'beginner') {
                 this.beginnerPitchStep = 0;
             }
+            this.triggerLevelUpVfx();
         }
     }
 
@@ -402,6 +403,7 @@ class TypingGame {
             this.level = newLevel;
             this.showFeedback(`🚀 Level ${this.level}!`, 'correct');
             this.playSound('levelUp');
+            this.triggerLevelUpVfx();
             return true;
         }
         return false;
@@ -716,6 +718,34 @@ class TypingGame {
     }
 
     escapeHtml(s) { return (s||'').replace(/[&<>"]+/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    
+    // ===== Level-up VFX (non-blocking) =====
+    triggerLevelUpVfx() {
+        const overlay = document.getElementById('vfxOverlay');
+        if (!overlay) return;
+        // Sweep bar from left to right
+        const sweep = document.createElement('div');
+        sweep.className = 'vfx-sweep';
+        overlay.appendChild(sweep);
+        setTimeout(() => { sweep.remove(); }, 1000);
+
+        // Edge confetti bursts (top and bottom edges)
+        const colors = ['#ffd700', '#ff6b6b', '#4fd1c5', '#667eea', '#38a169'];
+        const makeConfetti = (y) => {
+            for (let i = 0; i < 30; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'vfx-confetti';
+                piece.style.left = Math.random() * 100 + 'vw';
+                piece.style.top = y + 'px';
+                piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.transform = `rotate(${Math.random()*360}deg)`;
+                overlay.appendChild(piece);
+                setTimeout(() => piece.remove(), 1300);
+            }
+        };
+        makeConfetti(0);
+        makeConfetti(window.innerHeight - 10);
+    }
     
     createParticleEffect() {
         // Create floating particles for visual feedback
