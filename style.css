@@ -514,6 +514,41 @@ body {
     100% { transform: translateY(100vh) rotate(540deg); opacity: 0; }
 }
 
+/* Meme GIFs on sides */
+.meme-float {
+    position: fixed;
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.9;
+}
+
+.meme-float.left {
+    left: -140px;
+    animation: memeSlideInLeft 6.5s ease-out forwards;
+}
+
+.meme-float.right {
+    right: -140px;
+    animation: memeSlideInRight 6.5s ease-out forwards;
+}
+
+@keyframes memeSlideInLeft {
+    0% { transform: translateX(0); }
+    20% { transform: translateX(160px); }
+    80% { transform: translateX(160px); }
+    100% { transform: translateX(-20px); opacity: 0; }
+}
+
+@keyframes memeSlideInRight {
+    0% { transform: translateX(0); }
+    20% { transform: translateX(-160px); }
+    80% { transform: translateX(-160px); }
+    100% { transform: translateX(20px); opacity: 0; }
+}
+
 /* Modals and Dashboard */
 .modal {
     position: fixed;

@@ -21,6 +21,13 @@ class TypingGame {
         this.sentenceWords = [];
         this.currentWordIndex = 0;
         this.beginnerPitchStep = 0;
+        this.memeGifUrls = [
+            'https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif',
+            'https://media.giphy.com/media/3orieYJw7v8K2S1O76/giphy.gif',
+            'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif',
+            'https://media.giphy.com/media/26n6WywJyh39n1pBu/giphy.gif',
+            'https://media.giphy.com/media/3o7aCPg2n4k5p0Z2Fq/giphy.gif'
+        ];
         
         // Home row keys (the keys we want players to practice)
         this.homeRowKeys = ['a', 's', 'd', 'f', ' ', 'j', 'k', 'l', ';'];
@@ -300,6 +307,29 @@ class TypingGame {
                 return;
             }
 
+            // Word submission on comma (helps when sentence includes commas)
+            if (pressedKey === ',') {
+                if (this.typedWordBuffer.length > 0 && this.normalizeWord(this.typedWordBuffer) === this.normalizeWord(this.currentTarget)) {
+                    this.wordsCompleted++;
+                    this.score += this.level * (5 + this.currentTarget.length);
+                    this.showFeedback('✅ Word!', 'correct');
+                    this.playSound('word');
+                    this.currentWordIndex++;
+                    this.typedWordBuffer = '';
+                    if (this.currentWordIndex >= this.sentenceWords.length) {
+                        this.score += 10 * this.level;
+                        this.showFeedback('🎉 Sentence complete!', 'correct');
+                        this.startAdvancedSentence(this.level);
+                    } else {
+                        this.currentTarget = this.sentenceWords[this.currentWordIndex];
+                        this.updateAdvancedTargetDisplay();
+                    }
+                    this.checkAdvancedLevelUp();
+                    this.updateUI();
+                }
+                return;
+            }
+
             // Accept letters only (a-z)
             if (/^[a-z]$/.test(pressedKey)) {
                 this.typedWordBuffer += pressedKey;
@@ -517,6 +547,8 @@ class TypingGame {
         this.typedWordBuffer = '';
         this.updateAdvancedTargetDisplay();
         console.log(`📝 New sentence (L${level}): ${this.sentenceText}`);
+        // spawn fun memes on sentence advance
+        this.spawnMemeGifs();
     }
 
     pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -745,6 +777,23 @@ class TypingGame {
         };
         makeConfetti(0);
         makeConfetti(window.innerHeight - 10);
+        // also launch side memes on level up
+        this.spawnMemeGifs();
+    }
+
+    spawnMemeGifs() {
+        const overlay = document.getElementById('vfxOverlay');
+        if (!overlay || !this.memeGifUrls || this.memeGifUrls.length === 0) return;
+        const count = 2; // one on each side
+        for (let i = 0; i < count; i++) {
+            const img = document.createElement('img');
+            img.className = 'meme-float ' + (i % 2 === 0 ? 'left' : 'right');
+            img.src = this.memeGifUrls[Math.floor(Math.random() * this.memeGifUrls.length)];
+            img.alt = 'meme';
+            img.style.top = (60 + Math.random() * 20) + 'vh';
+            overlay.appendChild(img);
+            setTimeout(() => img.remove(), 6500);
+        }
     }
     
     createParticleEffect() {
